@@ -4,18 +4,30 @@ import random
 import pygame
 from pygame import mixer
 
+VOLUME = 0.03
+
 # Intialize the pygame
 pygame.init()
 
 # create the screen
 screen = pygame.display.set_mode((800, 600))
 
+# create a FPS clock
+fpsClock = pygame.time.Clock()
+
 # Background
-background = pygame.image.load('background.png')
+background = pygame.image.load('background.png').convert()
 
 # Sound
 mixer.music.load("background.wav")
+mixer.music.set_volume(VOLUME)
 mixer.music.play(-1)
+
+bulletSound = mixer.Sound("laser.wav")
+bulletSound.set_volume(VOLUME)
+
+explosionSound = mixer.Sound("explosion.wav")
+explosionSound.set_volume(VOLUME)
 
 # Caption and Icon
 pygame.display.set_caption("Space Invader")
@@ -23,7 +35,7 @@ icon = pygame.image.load('ufo.png')
 pygame.display.set_icon(icon)
 
 # Player
-playerImg = pygame.image.load('player.png')
+playerImg = pygame.image.load('player.png').convert_alpha()
 playerX = 370
 playerY = 480
 playerX_change = 0
@@ -37,7 +49,7 @@ enemyY_change = []
 num_of_enemies = 6
 
 for i in range(num_of_enemies):
-    enemyImg.append(pygame.image.load('enemy.png'))
+    enemyImg.append(pygame.image.load('enemy.png').convert_alpha())
     enemyX.append(random.randint(0, 736))
     enemyY.append(random.randint(50, 150))
     enemyX_change.append(4)
@@ -48,8 +60,8 @@ for i in range(num_of_enemies):
 # Ready - You can't see the bullet on the screen
 # Fire - The bullet is currently moving
 
-bulletImg = pygame.image.load('bullet.png')
-bulletX = 0
+bulletImg = pygame.image.load('bullet.png').convert_alpha()
+bulletX = -0
 bulletY = 480
 bulletX_change = 0
 bulletY_change = 10
@@ -113,13 +125,14 @@ while running:
 
         # if keystroke is pressed check whether its right or left
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                    running = False
             if event.key == pygame.K_LEFT:
                 playerX_change = -5
             if event.key == pygame.K_RIGHT:
                 playerX_change = 5
             if event.key == pygame.K_SPACE:
                 if bullet_state is "ready":
-                    bulletSound = mixer.Sound("laser.wav")
                     bulletSound.play()
                     # Get the current x cordinate of the spaceship
                     bulletX = playerX
@@ -150,22 +163,25 @@ while running:
 
         enemyX[i] += enemyX_change[i]
         if enemyX[i] <= 0:
-            enemyX_change[i] = 4
+            enemyX_change[i] = -enemyX_change[i]
+            enemyX[i] += enemyX_change[i]
             enemyY[i] += enemyY_change[i]
         elif enemyX[i] >= 736:
-            enemyX_change[i] = -4
+            enemyX_change[i] = -enemyX_change[i]
+            enemyX[i] += enemyX_change[i]
             enemyY[i] += enemyY_change[i]
 
         # Collision
-        collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
-        if collision:
-            explosionSound = mixer.Sound("explosion.wav")
-            explosionSound.play()
-            bulletY = 480
-            bullet_state = "ready"
-            score_value += 1
-            enemyX[i] = random.randint(0, 736)
-            enemyY[i] = random.randint(50, 150)
+        if bullet_state == "fire":
+            collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
+            if collision:
+                explosionSound.play()
+                bulletY = 480
+                bullet_state = "ready"
+                score_value += 1
+                enemyX[i] = random.randint(0, 736)
+                enemyY[i] = random.randint(50, 150)
+                enemyX_change[i] = abs(enemyX_change[i])+ 1
 
         enemy(enemyX[i], enemyY[i], i)
 
@@ -181,3 +197,4 @@ while running:
     player(playerX, playerY)
     show_score(textX, testY)
     pygame.display.update()
+    fpsClock.tick(60)
